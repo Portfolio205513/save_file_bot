@@ -84,25 +84,25 @@ def find_new_name(name, user_id):
 
 
 def delete(file_, user):
-    if len(file_system_data[user][file_]) > 1:
-        for index, item in enumerate(file_system_data[user][file_]):
-            if index:
-                delete(item, user)
+    for item in file_system_data[user][file_][1:]:
+        delete(item, user)
     file_system_data[user][file_system_data[user][file_][0]].remove(file_)
     del file_system_data[user][file_]
     save()
 
 
 def help_me(message):
+    user_id = message.from_user.id
+
     if state == State.MainMenu:
-        bot.send_message(message.from_user.id,
+        bot.send_message(user_id,
                          'Так, слушай и запоминай...\n'
                          '    Сохранить файл - сохраняет файл в облако.\n' +
                          '    Загрузить файл - позволяет выбрать и загрузить файл.\n' +
                          '    Искать файл - ищет файлы по введённым данным.\n'
                          '    "/help" - выводит подсказку.')
     elif state == State.FileManager:
-        bot.send_message(message.from_user.id,
+        bot.send_message(user_id,
                          'Так, слушай и запоминай...\n'
                          '    "back" - вернуться в предыдущую папку.\n'
                          '    "/start" - возвращает в главное меню.\n'
@@ -111,14 +111,14 @@ def help_me(message):
                          '    "create" - создать новую папку в текущей.\n'
                          '    "add" - сохраняет файл в облако.\n')
     elif state == State.Edit:
-        bot.send_message(message.from_user.id,
+        bot.send_message(user_id,
                          'Так, слушай и запоминай...\n'
                          '    Введи имя для папки (только без повторов! я слежу...), чтобы завершить её создание.\n')
     elif state == State.Delete:
-        bot.send_message(message.from_user.id,
+        bot.send_message(user_id,
                          'Мне нечего сказать, пути назад нет... Хотя можешь попробовать "/start".')
     elif state == State.DeleteQ:
-        bot.send_message(message.from_user.id,
+        bot.send_message(user_id,
                          'Так, слушай и запоминай...\n'
                          '    Ответишь "Yes" - сотрёшь все данные в папке и её саму, '
                          '"No" - вернёшься в предудущее меню.')
@@ -138,13 +138,12 @@ def send_keyboard(message):
                          reply_markup=markup)
     elif state == State.FileManager:
         markup.row('back', '/start', '/help')
-        if not file_system_data[user_id][current_file[user_id]][0]:
+        if current_file[user_id] == "main":
             markup.add('create')
         else:
             markup.row('delete', 'rename', 'create')
-        for index, item in enumerate(file_system_data[user_id][current_file[user_id]]):
-            if index:
-                markup.add(item)
+        for item in file_system_data[user_id][current_file[user_id]][1:]:
+            markup.add(item)
         bot.send_message(int(user_id),
                          text=f'Текущая папка:'
                               f' {current_file[user_id] if not current_file[user_id] == "main" else "Мой файловый менеджер"}',
@@ -206,7 +205,6 @@ def file_manager(message):
         send_keyboard(message)
     elif message.text == 'back':
         if current_file[user_id] != 'main':
-            # if file_system_data[user_id][current_file[user_id]][0] != '':
             current_file[user_id] = file_system_data[user_id][current_file[user_id]][0]
             send_keyboard(message)
         else:
@@ -239,7 +237,7 @@ def deleteq(message):
     global state
     user_id = str(message.from_user.id)
 
-    if message.text == 'Yes':
+    if (message.text == 'Yes') or (message.text == 'yes') or (message.text == 'y'):
         temp = file_system_data[user_id][current_file[user_id]][0]
         delete(current_file[user_id], user_id)
         current_file[user_id] = temp
@@ -260,9 +258,8 @@ def rename(message):
     if new_name not in file_system_data[user_id]:
         file_system_data[user_id][parent].remove(current_file[user_id])
         file_system_data[user_id][parent].append(new_name)
-        for index, item in enumerate(file_system_data[user_id][current_file[user_id]]):
-            if index:
-                file_system_data[user_id][item][0] = new_name
+        for item in file_system_data[user_id][current_file[user_id]][1:]:
+            file_system_data[user_id][item][0] = new_name
         file_system_data[user_id][new_name] = file_system_data[user_id].pop(current_file[user_id])
         bot.send_message(int(user_id), f'Папка "{current_file[user_id]}" была переименована в "{new_name}"')
         current_file[user_id] = new_name
@@ -277,25 +274,27 @@ def rename(message):
 def get_text_messages(message):
     global state
     user_id = message.from_user.id
+
     if user_id not in users:
         bot.send_message(user_id, 'Вам отакзано в доступе.')
         print(f"\033[31m{message.from_user.username} access denied\n"
               f"\033[35m write\033[0m: \"{message.text}\"\n"
               f"\033[31mUser full\033[0m: {message.from_user}")
-    else:
-        print(f"\033[31m{message.from_user.username}\033[32m connected \n"
-              f"\033[31mUser full\033[0m: {message.from_user}")
+        return
 
-        if message.text == '/help':
-            help_me(message)
-            send_keyboard(message)
-        elif message.text == '/start':
-            state = State.MainMenu
-            send_keyboard(message)
-            if str(user_id) not in file_system_data:
-                file_system_data[str(user_id)] = file_system_default
-            if str(user_id) not in current_file:
-                current_file[str(user_id)] = 'main'
+    print(f"\033[31m{message.from_user.username}\033[32m connected \n"
+          f"\033[31mUser full\033[0m: {message.from_user}")
+
+    if message.text == '/help':
+        help_me(message)
+        send_keyboard(message)
+    elif message.text == '/start':
+        state = State.MainMenu
+        send_keyboard(message)
+        if str(user_id) not in file_system_data:
+            file_system_data[str(user_id)] = file_system_default
+        if str(user_id) not in current_file:
+            current_file[str(user_id)] = 'main'
     save()
 
 
@@ -314,7 +313,7 @@ def message_worker(message):
         print(f"\033[31m{message.from_user.username} access denied\n"
               f"\033[35m write\033[0m: \"{message.text}\"\n"
               f"\033[31mUser full\033[0m: {message.from_user}")
-        return 0
+        return
 
     if state == State.MainMenu:
         main_menu(message)
