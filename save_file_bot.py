@@ -56,7 +56,6 @@ State.Edit = State(9)
 with open("tokens.json", "r") as file:
     token = json.load(file)["save_file_bot"]
 file.close()
-
 bot = telebot.TeleBot(token)
 users = [576109089, 1055941724, 5346695571]
 file_system_default = {'main': ['', 'home', ], 'home': ['main', ]}
@@ -70,7 +69,8 @@ file.close()
 
 def save():
     with open("data_base.json", "w") as file_:
-        json.dump({"file_system_data": file_system_data, "current_file": current_file}, file_, indent=4, ensure_ascii=False)
+        json.dump({"file_system_data": file_system_data, "current_file": current_file},
+                  file_, indent=4, ensure_ascii=False)
     file_.close()
 
 
@@ -83,13 +83,13 @@ def find_new_name(name, user_id):
         current_name += 1
 
 
-def delete(file, user):
-    if len(file_system_data[user][file]) > 1:
-        for index, item in enumerate(file_system_data[user][file]):
+def delete(file_, user):
+    if len(file_system_data[user][file_]) > 1:
+        for index, item in enumerate(file_system_data[user][file_]):
             if index:
                 delete(item, user)
-    file_system_data[user][file_system_data[user][file][0]].remove(file)
-    del file_system_data[user][file]
+    file_system_data[user][file_system_data[user][file_][0]].remove(file_)
+    del file_system_data[user][file_]
     save()
 
 
@@ -101,7 +101,7 @@ def help_me(message):
                          '    Загрузить файл - позволяет выбрать и загрузить файл.\n' +
                          '    Искать файл - ищет файлы по введённым данным.\n'
                          '    "/help" - выводит подсказку.')
-    if state == State.FileManager:
+    elif state == State.FileManager:
         bot.send_message(message.from_user.id,
                          'Так, слушай и запоминай...\n'
                          '    "back" - вернуться в предыдущую папку.\n'
@@ -110,14 +110,14 @@ def help_me(message):
                          '    "rename" - переназвать текущую папку.\n'
                          '    "create" - создать новую папку в текущей.\n'
                          '    "add" - сохраняет файл в облако.\n')
-    if state == State.Edit:
+    elif state == State.Edit:
         bot.send_message(message.from_user.id,
                          'Так, слушай и запоминай...\n'
                          '    Введи имя для папки (только без повторов! я слежу...), чтобы завершить её создание.\n')
-    if state == State.Delete:
+    elif state == State.Delete:
         bot.send_message(message.from_user.id,
                          'Мне нечего сказать, пути назад нет... Хотя можешь попробовать "/start".')
-    if state == State.DeleteQ:
+    elif state == State.DeleteQ:
         bot.send_message(message.from_user.id,
                          'Так, слушай и запоминай...\n'
                          '    Ответишь "Yes" - сотрёшь все данные в папке и её саму, '
@@ -125,7 +125,7 @@ def help_me(message):
 
 
 def send_keyboard(message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
     markup = types.ReplyKeyboardMarkup(row_width=1)
     if state == State.MainMenu:
         markup.add('Сохранить файл',
@@ -133,7 +133,7 @@ def send_keyboard(message):
                    'Искать файл',
                    'Файловая система',
                    '/help')
-        bot.send_message(user_id,
+        bot.send_message(int(user_id),
                          text='Привет, чем могу быть полезен?',
                          reply_markup=markup)
     elif state == State.FileManager:
@@ -145,27 +145,27 @@ def send_keyboard(message):
         for index, item in enumerate(file_system_data[user_id][current_file[user_id]]):
             if index:
                 markup.add(item)
-        bot.send_message(user_id,
+        bot.send_message(int(user_id),
                          text=f'Текущая папка:'
                               f' {current_file[user_id] if not current_file[user_id] == "main" else "Мой файловый менеджер"}',
                          reply_markup=markup)
     elif state == State.Edit:
         markup.row('/start', '/help')
         markup.add(find_new_name(name='new folder', user_id=user_id))
-        bot.send_message(user_id,
+        bot.send_message(int(user_id),
                          text='Введи имя папки',
                          reply_markup=markup)
     elif state == State.DeleteQ:
         markup.row('/start', '/help')
         markup.add('Yes',
                    'No')
-        bot.send_message(user_id,
+        bot.send_message(int(user_id),
                          text=f'Уверен? Это удалит все файлы и папки хранящиеся в {current_file[user_id]}.',
                          reply_markup=markup)
     elif state == State.Rename:
         markup.add('/start',
                    find_new_name(name='old folder', user_id=user_id))
-        bot.send_message(user_id,
+        bot.send_message(int(user_id),
                          text=f'Как назовёшь папку "{current_file[user_id]}"?',
                          reply_markup=markup)
 
@@ -186,7 +186,7 @@ def main_menu(message):
 
 
 def file_manager(message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
     global state
 
     if message.text == 'delete':
@@ -194,67 +194,68 @@ def file_manager(message):
             state = State.DeleteQ
             send_keyboard(message)
         else:
-            bot.send_message(user_id, 'Нельзя удалять папку: "Мой файловый менеджер".')
+            bot.send_message(int(user_id), 'Нельзя удалять папку: "Мой файловый менеджер".')
     elif message.text == 'rename':
         if current_file[user_id] != 'main':
             state = State.Rename
             send_keyboard(message)
         else:
-            bot.send_message(user_id, 'Нельзя переименовывать папку: "Мой файловый менеджер".')
+            bot.send_message(int(user_id), 'Нельзя переименовывать папку: "Мой файловый менеджер".')
     elif message.text == 'create':
         state = State.Edit
         send_keyboard(message)
     elif message.text == 'back':
-        if file_system_data[user_id][current_file[user_id]][0] != '':
+        if current_file[user_id] != 'main':
+            # if file_system_data[user_id][current_file[user_id]][0] != '':
             current_file[user_id] = file_system_data[user_id][current_file[user_id]][0]
             send_keyboard(message)
         else:
-            bot.send_message(user_id, 'Ты и так уже в самомом начале')
+            bot.send_message(int(user_id), 'Ты и так уже в самомом начале')
     elif message.text in file_system_data[user_id]:
         current_file[user_id] = message.text
         send_keyboard(message)
     else:
-        bot.send_message(user_id, 'Такого не знаю попробуй ещё раз')
+        bot.send_message(int(user_id), 'Такого не знаю попробуй ещё раз')
         send_keyboard(message)
 
 
 def edit(message):
-    user_id = message.from_user.id
     global state
+    user_id = str(message.from_user.id)
 
     if message.text not in file_system_data[user_id]:
         file_system_data[user_id][message.text] = [current_file[user_id], ]
         file_system_data[user_id][current_file[user_id]].append(message.text)
         current_file[user_id] = message.text
-        bot.send_message(user_id, 'Новая папка создана.')
+        bot.send_message(int(user_id), 'Новая папка создана.')
         save()
         state = State.FileManager
         send_keyboard(message)
     else:
-        bot.send_message(user_id, f'Папка с именем "{message.text}" уже существует, попробуй другое.')
+        bot.send_message(int(user_id), f'Папка с именем "{message.text}" уже существует, попробуй другое.')
 
 
 def deleteq(message):
-    user_id = message.from_user.id
     global state
+    user_id = str(message.from_user.id)
 
     if message.text == 'Yes':
         temp = file_system_data[user_id][current_file[user_id]][0]
         delete(current_file[user_id], user_id)
         current_file[user_id] = temp
-        bot.send_message(user_id, 'Папка была удалена')
+        bot.send_message(int(user_id), 'Папка была удалена')
     else:
-        bot.send_message(user_id, 'Нет, так нет...')
+        bot.send_message(int(user_id), 'Нет, так нет...')
 
     state = State.FileManager
     send_keyboard(message)
 
 
 def rename(message):
-    user_id = message.from_user.id
+    global state
+    user_id = str(message.from_user.id)
     new_name = message.text
     parent = file_system_data[user_id][current_file[user_id]][0]
-    global state
 
     if new_name not in file_system_data[user_id]:
         file_system_data[user_id][parent].remove(current_file[user_id])
@@ -263,13 +264,13 @@ def rename(message):
             if index:
                 file_system_data[user_id][item][0] = new_name
         file_system_data[user_id][new_name] = file_system_data[user_id].pop(current_file[user_id])
-        bot.send_message(user_id, f'Папка "{current_file[user_id]}" была переименована в "{new_name}"')
+        bot.send_message(int(user_id), f'Папка "{current_file[user_id]}" была переименована в "{new_name}"')
         current_file[user_id] = new_name
         save()
         state = State.FileManager
         send_keyboard(message)
     else:
-        bot.send_message(user_id, f'Папка с именем "{new_name}" уже существует, попробуй другое.')
+        bot.send_message(int(user_id), f'Папка с именем "{new_name}" уже существует, попробуй другое.')
 
 
 @bot.message_handler(commands=['start', 'help'])
@@ -291,10 +292,10 @@ def get_text_messages(message):
         elif message.text == '/start':
             state = State.MainMenu
             send_keyboard(message)
-            if user_id not in file_system_data:
-                file_system_data[user_id] = file_system_default
-            if user_id not in current_file:
-                current_file[user_id] = 'main'
+            if str(user_id) not in file_system_data:
+                file_system_data[str(user_id)] = file_system_default
+            if str(user_id) not in current_file:
+                current_file[str(user_id)] = 'main'
     save()
 
 
