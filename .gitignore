@@ -1,4 +1,4 @@
-tokens.json
+*.json
 data_base.txt
 test.py
 food.py
